@@ -60,9 +60,10 @@ In this project, we follow the [APDrawingGAN](https://github.com/yiranran/APDraw
   python train.py --dataroot /home/pz1/datasets/fss/FS2K_data/train/photo/ --checkpoints_dir checkpoints --name ckpt_0 \
   --use_local --discriminator_local --niter 150 --niter_decay 0 --save_epoch_freq 1
   ```
+
 - ```shell
-python train.py --dataroot /home/ludan/code/github/FSGAN/FSGAN/dataset/FS2K_preproc/train/photo/ --checkpoints_dir checkpoints --name ckpt_0 --use_local --discriminator_local --niter 150 --niter_decay 0 --save_epoch_freq 1 --gpu_ids 0,1
-```
+  python train.py --dataroot /home/ludan/code/github/FSGAN/FSGAN/dataset/FS2K_preproc/train/photo/ --checkpoints_dir checkpoints --name ckpt_0 --use_local --discriminator_local --niter 150 --niter_decay 0 --save_epoch_freq 1 --gpu_ids 0,1
+  ```
 
 + If you run on DGX-server, you can use `sub_by_id.sh` to set up many experiments one time.
 + To see losses in training, please refer to log file [slurm.out](https://github.com/DengPingFan/FSGAN/blob/main/slurm-221823.out).
