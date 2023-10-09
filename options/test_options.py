@@ -11,9 +11,9 @@ class TestOptions(BaseOptions):
         parser.add_argument('--which_epoch', type=str, default='100', help='which epoch to load? set to latest to use latest cached model')
         parser.add_argument('--how_many', type=int, default=2000, help='how many test images to run')
         parser.add_argument('--save2', action='store_true', help='only save real_A and fake_B')
-        parser.add_argument('--lm_dir', type=str, default='/home/pz1/datasets/fss/FS2K_data/test/landmark/', help='path to facial landmarks')
-        parser.add_argument('--bg_dir', type=str, default='/home/pz1/datasets/fss/FS2K_data/test/mask/', help='path to background masks')
-        parser.add_argument('--data_json', default='/home/pz1/datasets/fss/FS2K_data/test/anno_test.json', help='path to att')
+        parser.add_argument('--lm_dir', type=str, default='/home/ludan/code/github/FSGAN/FSGAN/dataset/FS2K_preproc/test/landmark/', help='path to facial landmarks')
+        parser.add_argument('--bg_dir', type=str, default='/home/ludan/code/github/FSGAN/FSGAN/dataset/FS2K_preproc/test/mask/', help='path to background masks')
+        parser.add_argument('--data_json', default='/home/ludan/code/github/FSGAN/FSGAN/dataset/FS2K_preproc/test/anno_test.json', help='path to att')
 
         # To avoid cropping, the loadSize should be the same as fineSize
         parser.set_defaults(loadSize=parser.get_default('fineSize'))

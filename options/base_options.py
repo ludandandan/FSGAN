@@ -11,7 +11,9 @@ class BaseOptions():
         self.initialized = False
 
     def initialize(self, parser):
-        parser.add_argument('--dataroot', default='/home/pz1/datasets/fss/FS2K_data/test/photo', help='path to images (should have subfolders train, test etc)')
+        parser.add_argument('--dataroot', default='/home/ludan/code/github/FSGAN/FSGAN/dataset/FS2K_preproc/train/photo', help='path to images (should have subfolders train, test etc)')
+
+        #parser.add_argument('--dataroot', default='/home/pz1/datasets/fss/FS2K_data/test/photo', help='path to images (should have subfolders train, test etc)')
         # parser.add_argument('--train_json', default='/home/pz1/datasets/fss/FS2K_data/test/anno_test.json', help='path to att')
         parser.add_argument('--batch_size', type=int, default=1, help='input batch size')
         parser.add_argument('--loadSize', type=int, default=512, help='scale images to this size')

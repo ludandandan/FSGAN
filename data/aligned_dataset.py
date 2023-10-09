@@ -60,8 +60,8 @@ class AlignedDataset(BaseDataset):
     def __init__(self):
         super(AlignedDataset).__init__()
         self.style_dict = {}
-        json_train = json.load(open('/home/pz1/datasets/fss/FS2K_data/anno_train.json'))
-        json_test = json.load(open('/home/pz1/datasets/fss/FS2K_data/anno_test.json'))
+        json_train = json.load(open('/home/ludan/code/github/FSGAN/FSGAN/dataset/FS2K_preproc/train/anno_train.json'))
+        json_test = json.load(open('/home/ludan/code/github/FSGAN/FSGAN/dataset/FS2K_preproc/test/anno_test.json'))
         for json_data in [json_train, json_test]:
             for attr in json_data:
                 style = int(attr['style'])

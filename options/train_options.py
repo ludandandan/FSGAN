@@ -23,9 +23,9 @@ class TrainOptions(BaseOptions):
         parser.add_argument('--no_html', action='store_true', help='do not save intermediate training results to [opt.checkpoints_dir]/[opt.name]/web/')
         parser.add_argument('--lr_policy', type=str, default='lambda', help='learning rate policy: lambda|step|plateau|cosine')
         parser.add_argument('--lr_decay_iters', type=int, default=50, help='multiply by a gamma every lr_decay_iters iterations')
-        parser.add_argument('--lm_dir', type=str, default='/home/pz1/datasets/fss/FS2K_data/train/landmark/', help='path to facial landmarks')
-        parser.add_argument('--bg_dir', type=str, default='/home/pz1/datasets/fss/FS2K_data/train/mask/', help='path to background masks')
-        parser.add_argument('--data_json', default='/home/pz1/datasets/fss/FS2K_data/train/anno_train.json', help='path to att')
+        parser.add_argument('--lm_dir', type=str, default='/home/ludan/code/github/FSGAN/FSGAN/dataset/FS2K_preproc/train/landmark/', help='path to facial landmarks')
+        parser.add_argument('--bg_dir', type=str, default='/home/ludan/code/github/FSGAN/FSGAN/dataset/FS2K_preproc/train/mask/', help='path to background masks')
+        parser.add_argument('--data_json', default='/home/ludan/code/github/FSGAN/FSGAN/dataset/FS2K_preproc/train/anno_train.json', help='path to att')
         # ============================================loss=========================================================
         # L1 and local
         parser.add_argument('--lambda_L1', type=float, default=100.0, help='weight for L1 loss')
