@@ -110,17 +110,17 @@ def define_G(input_nc, output_nc, ngf, netG, norm='batch', use_dropout=False, in
 def define_D(input_nc, ndf, netD, num_D,
              n_layers_D=3, norm='batch', use_sigmoid=False, init_type='normal', init_gain=0.02, gpu_ids=[]):
     net = None
-    norm_layer = get_norm_layer(norm_type=norm)
+    norm_layer = get_norm_layer(norm_type=norm) # 对于batch，固定nn.BatchNorm(affine=True)，学习缩放和平移参数
 
     if netD == 'basic':
         net = NLayerDiscriminator(input_nc, ndf, n_layers=3, norm_layer=norm_layer, use_sigmoid=use_sigmoid)
     elif netD == 'n_layers':
         net = NLayerDiscriminator(input_nc, ndf, n_layers_D, norm_layer=norm_layer, use_sigmoid=use_sigmoid)
-    elif netD == 'basic_cls':
+    elif netD == 'basic_cls': # input_nc=3, ndf=64,norm_layer=nn.BatchNorm(affine=True),n_class=3
         net = NLayerDiscriminatorCls(input_nc, ndf, n_layers_D=3, norm_layer=norm_layer, n_class=3)
     elif netD == 'pixel':
         net = PixelDiscriminator(input_nc, ndf, norm_layer=norm_layer, use_sigmoid=use_sigmoid)
-    elif netD == 'multiscale':
+    elif netD == 'multiscale': #input_nc=6,ndf=32,n_layers_D=3,norm_layer=nn.BatchNorm(affine=True),use_sigmoid=True
         net = MultiscaleDiscriminator(input_nc, ndf, n_layers_D, norm_layer=norm_layer, use_sigmoid=use_sigmoid, num_D=2, getIntermFeat=True)
     else:
         raise NotImplementedError('Discriminator model name [%s] is not recognized' % net)
@@ -172,10 +172,10 @@ class NLayerDiscriminatorCls(nn.Module):
 		"""Construct a PatchGAN discriminator
 
 		Parameters:
-			input_nc (int)  -- the number of channels in input images
-			ndf (int)       -- the number of filters in the last conv layer
-			n_layers (int)  -- the number of conv layers in the discriminator
-			norm_layer      -- normalization layer
+			input_nc (int)  -- the number of channels in input images输入图像的通道数
+			ndf (int)       -- the number of filters in the last conv layer最后一个卷积层的特征数
+			n_layers (int)  -- the number of conv layers in the discriminator判别器中的卷积层数
+			norm_layer      -- normalization layer归一化层
 		"""
 		super(NLayerDiscriminatorCls, self).__init__()
 		if type(norm_layer) == functools.partial:  # no need to use bias as BatchNorm2d has affine parameters
@@ -184,7 +184,7 @@ class NLayerDiscriminatorCls(nn.Module):
 			use_bias = norm_layer != nn.BatchNorm2d
 
 		kw = 4
-		padw = 1
+		padw = 1#通道3->64，卷积核4x4，步长2，padding=1，使用leakyReLU
 		sequence = [nn.Conv2d(input_nc, ndf, kernel_size=kw, stride=2, padding=padw), nn.LeakyReLU(0.2, True)]
 		nf_mult = 1
 		nf_mult_prev = 1
@@ -197,8 +197,8 @@ class NLayerDiscriminatorCls(nn.Module):
 				nn.LeakyReLU(0.2, True)
 			]
 
-		nf_mult_prev = nf_mult
-		nf_mult = min(2 ** n_layers_D, 8)
+		nf_mult_prev = nf_mult #4
+		nf_mult = min(2 ** n_layers_D, 8) #8
 		sequence1 = [
 			nn.Conv2d(ndf * nf_mult_prev, ndf * nf_mult, kernel_size=kw, stride=1, padding=padw, bias=use_bias),
 			norm_layer(ndf * nf_mult),
@@ -238,9 +238,9 @@ class MultiscaleDiscriminator(nn.Module):
     def __init__(self, input_nc, ndf=64, n_layers=3, norm_layer=nn.BatchNorm2d, 
                  use_sigmoid=False, num_D=3, getIntermFeat=False):
         super(MultiscaleDiscriminator, self).__init__()
-        self.num_D = num_D
-        self.n_layers = n_layers
-        self.getIntermFeat = getIntermFeat
+        self.num_D = num_D #2
+        self.n_layers = n_layers #3
+        self.getIntermFeat = getIntermFeat#True
      
         for i in range(num_D):
             netD = NNLayerDiscriminator(input_nc, ndf, n_layers, norm_layer, use_sigmoid, getIntermFeat)
@@ -278,11 +278,11 @@ class MultiscaleDiscriminator(nn.Module):
 class NNLayerDiscriminator(nn.Module):
     def __init__(self, input_nc, ndf=64, n_layers=3, norm_layer=nn.BatchNorm2d, use_sigmoid=False, getIntermFeat=False):
         super(NNLayerDiscriminator, self).__init__()
-        self.getIntermFeat = getIntermFeat
-        self.n_layers = n_layers
+        self.getIntermFeat = getIntermFeat # True
+        self.n_layers = n_layers #3
 
         kw = 4
-        padw = int(np.ceil((kw-1.0)/2))
+        padw = int(np.ceil((kw-1.0)/2))#2
         sequence = [[nn.Conv2d(input_nc, ndf, kernel_size=kw, stride=2, padding=padw), nn.LeakyReLU(0.2, True)]]
 
         nf = ndf
@@ -337,7 +337,7 @@ class LocalEnhancer(nn.Module):
         model_pred = [nn.Conv2d(input_nc + extra_channel, 3, kernel_size=1, padding=0)]
         self.model_pred = nn.Sequential(*model_pred)       
         ###### global generator model #####           
-        ngf_global = ngf * (2**n_local_enhancers)
+        ngf_global = ngf * (2**n_local_enhancers)#128
         model_global = GlobalGenerator(input_nc, output_nc, ngf_global, 4, n_blocks_global, norm_layer).model        
         model_global = [model_global[i] for i in range(len(model_global)-3)] # get rid of final convolution layers        
         self.model = nn.Sequential(*model_global)
@@ -404,7 +404,7 @@ class GlobalGenerator(nn.Module):
                       norm_layer(ngf * mult * 2), nn.LeakyReLU()]
 
         ### resnet blocks
-        mult = 2**n_downsampling
+        mult = 2**n_downsampling #8
 
         for i in range(n_blocks):
             model += [RDB(ngf * mult, 4, ngf *4), norm_layer(ngf * mult), nn.LeakyReLU()]

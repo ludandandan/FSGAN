@@ -12,16 +12,16 @@ class APDrawingGANModel(BaseModel):
     def modify_commandline_options(parser, is_train=True):
 
         # changing the default values
-        parser.set_defaults(pool_size=0, no_lsgan=True, norm='batch')# no_lsgan=True, use_lsgan=False
+        parser.set_defaults(pool_size=0, no_lsgan=True, norm='batch')# no_lsgan=True, use_lsgan=False 设置默认值
         parser.set_defaults(dataset_mode='aligned')
 
         return parser
 
     def initialize(self, opt):
-        BaseModel.initialize(self, opt)
+        BaseModel.initialize(self, opt) # 完成基础模型的初始化设置，包括gpu，存储路径等
         self.isTrain = opt.isTrain
         # specify the training losses you want to print out. The program will call base_model.get_current_losses
-        self.loss_names = ['G_GAN', 'G_L1', 'D_real', 'D_fake', 'G_VGG', 'G_CLS', 'G_local']
+        self.loss_names = ['G_GAN', 'G_L1', 'D_real', 'D_fake', 'G_VGG', 'G_CLS', 'G_local'] #具体要打印的训练Loss
         self.loss_names.append('D_real_local')
         self.loss_names.append('D_fake_local')
         self.loss_names.append('G_GAN_local')
@@ -31,25 +31,26 @@ class APDrawingGANModel(BaseModel):
         self.loss_names.append('G')
         print('loss_names', self.loss_names)
         # specify the images you want to save/display. The program will call base_model.get_current_visuals
-        self.visual_names = ['real_A', 'fake_B', 'real_B']
+        self.visual_names = ['real_A', 'fake_B', 'real_B'] # 想要保存和展示的图像名字
         if self.opt.use_local:
             self.visual_names += ['fake_B1']
         if not self.isTrain and self.opt.save2:
             self.visual_names = ['real_A', 'fake_B']
         print('visuals', self.visual_names)
         # specify the models you want to save to the disk. The program will call base_model.save_networks and base_model.load_networks
-        if self.isTrain:
+        if self.isTrain: #想要保存的模型
             self.model_names = ['D', 'D_Cls']
-        else:  # during test time, only load Gs
+        else:  # during test time, only load Gs 
             self.model_names = ['G']
             self.auxiliary_model_names = []
-        if self.opt.use_local:
+        if self.opt.use_local: #如果使用局部的GAN，还需要保存这些两个眼睛，一个鼻子，一个嘴巴，一个头发，一个剩下的，一个总的结合的
             self.model_names += ['GLEyel','GLEyer','GLNose','GLMouth','GLHair','GLBG','GCombine']
         print('model_names', self.model_names)
 
         if self.isTrain:
             # define a discriminator; conditional GANs need to take both input and output images; Therefore, #channels for D is input_nc + output_nc
-            use_sigmoid = opt.no_lsgan
+            use_sigmoid = opt.no_lsgan #True
+            # opt.input_nc=3, opt.ndf*2=64,opt.n_layers_D=3,opt.norm=batch,use_sigmoid=True,opt.init_type='kaiming',opt.init_gain=0.02, self.gpu_ids=1,2
             self.netD_Cls = networks.define_D(opt.input_nc, opt.ndf*2, 'basic_cls', 1, opt.n_layers_D, opt.norm, use_sigmoid, opt.init_type, opt.init_gain, self.gpu_ids)
             self.netD = networks.define_D(opt.input_nc + opt.output_nc, opt.ndf, 'multiscale',2,
                                           opt.n_layers_D, opt.norm, use_sigmoid, opt.init_type, opt.init_gain, self.gpu_ids)

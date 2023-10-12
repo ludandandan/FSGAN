@@ -70,38 +70,38 @@ class BaseOptions():
             parser = self.initialize(parser)
 
         # get the basic options
-        opt, _ = parser.parse_known_args()
+        opt, _ = parser.parse_known_args() # 获取了基本操作（感觉都来自BaseOption里面默认的）
 
-        # modify model-related parser options
-        model_name = opt.model
+        # modify model-related parser options # 修改模型相关的解析参数
+        model_name = opt.model # 从opt里面获取模型的名字：apdrawing_gan
         model_option_setter = models.get_option_setter(model_name)
         parser = model_option_setter(parser, self.isTrain)
-        opt, _ = parser.parse_known_args()  # parse again with the new defaults
+        opt, _ = parser.parse_known_args()  # parse again with the new defaults # 再次从parser中解析出参数
 
-        # modify dataset-related parser options
-        dataset_name = opt.dataset_mode
+        # modify dataset-related parser options # 修改数据集相关的参数
+        dataset_name = opt.dataset_mode # 获取一个参数dataset_mode，默认是aligned
         dataset_option_setter = data.get_option_setter(dataset_name)
         parser = dataset_option_setter(parser, self.isTrain)
 
         self.parser = parser
 
-        return parser.parse_args()
+        return parser.parse_args() # parse_args()与parse_known_args()的区别是后者对于未定义的参数传入也不会报错
 
-    def print_options(self, opt):
+    def print_options(self, opt): #打印参数
         message = ''
         message += '----------------- Options ---------------\n'
         for k, v in sorted(vars(opt).items()):
             comment = ''
-            default = self.parser.get_default(k)
+            default = self.parser.get_default(k) # 获取默认值，如果不是默认值就打印提示
             if v != default:
                 comment = '\t[default: %s]' % str(default)
             message += '{:>25}: {:<30}{}\n'.format(str(k), str(v), comment)
         message += '----------------- End -------------------'
         print(message)
 
-        # save to the disk
+        # save to the disk # 将参数保存起来
         expr_dir = os.path.join(opt.checkpoints_dir, opt.name)
-        util.mkdirs(expr_dir)
+        util.mkdirs(expr_dir) # 创建文件夹checkpoints/ckpt_0
         file_name = os.path.join(expr_dir, 'opt.txt')
         with open(file_name, 'wt') as opt_file:
             opt_file.write(message)
@@ -109,17 +109,17 @@ class BaseOptions():
 
     def parse(self):
 
-        opt = self.gather_options()
+        opt = self.gather_options() # 获取了参数
         if opt.use_local:
             opt.loadSize = opt.fineSize
         opt.isTrain = self.isTrain   # train or test
 
-        # process opt.suffix
+        # process opt.suffix # 处理后缀
         if opt.suffix:
             suffix = ('_' + opt.suffix.format(**vars(opt))) if opt.suffix != '' else ''
             opt.name = opt.name + suffix
 
-        self.print_options(opt)
+        self.print_options(opt) #打印并保存参数到硬盘
 
         # set gpu ids
         str_ids = opt.gpu_ids.split(',')
@@ -129,7 +129,7 @@ class BaseOptions():
             if id >= 0:
                 opt.gpu_ids.append(id)
         if len(opt.gpu_ids) > 0:
-            torch.cuda.set_device(opt.gpu_ids[0])
+            torch.cuda.set_device(opt.gpu_ids[0]) # 这里为什么设置0呢，这样不就只能用一个GPU了吗
 
         self.opt = opt
         return self.opt

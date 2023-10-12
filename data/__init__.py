@@ -5,11 +5,11 @@ from data.base_dataset import BaseDataset
 
 
 def find_dataset_using_name(dataset_name):
-    # Given the option --dataset_mode [datasetname],
+    # Given the option --dataset_mode [datasetname], 默认是aligned
     # the file "data/datasetname_dataset.py"
     # will be imported.
-    dataset_filename = "data." + dataset_name + "_dataset"
-    datasetlib = importlib.import_module(dataset_filename)
+    dataset_filename = "data." + dataset_name + "_dataset" # data.aligned_dataset
+    datasetlib = importlib.import_module(dataset_filename) # import data.aligned_dataset
 
     # In the file, the class called DatasetNameDataset() will
     # be instantiated. It has to be a subclass of BaseDataset,
@@ -34,10 +34,10 @@ def get_option_setter(dataset_name):
 
 
 def create_dataset(opt):
-    dataset = find_dataset_using_name(opt.dataset_mode)
+    dataset = find_dataset_using_name(opt.dataset_mode) #<class 'data.aligned_dataset.AlignedDataset'>
     instance = dataset()
     instance.initialize(opt)
-    print("dataset [%s] was created" % (instance.name()))
+    print("dataset [%s] was created" % (instance.name())) # instance的A_paths中存储了训练集照片图像的绝对路径；style_dict存储了训练集和测试集所有图片的风格类型
     return instance
 
 
@@ -48,14 +48,14 @@ def CreateDataLoader(opt):
 
 
 # Wrapper class of Dataset class that performs
-# multi-threaded data loading
+# multi-threaded data loading 多线程数据载入
 class CustomDatasetDataLoader(BaseDataLoader):
     def name(self):
         return 'CustomDatasetDataLoader'
 
     def initialize(self, opt):
-        BaseDataLoader.initialize(self, opt)
-        self.dataset = create_dataset(opt)
+        BaseDataLoader.initialize(self, opt) # 将参数给到BaseDataLoader
+        self.dataset = create_dataset(opt)#创建数据集data.aligned_dataset.AlignedDataset，包括dir_AB数据集的位置，A_paths训练集照片的绝对路径列表，opt参数，style_dict数据集内所有图像的风格
         self.dataloader = torch.utils.data.DataLoader(
             self.dataset,
             batch_size=opt.batch_size,

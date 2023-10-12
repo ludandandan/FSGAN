@@ -57,7 +57,7 @@ def getSoft(size,xb,yb,boundwidth=5.0):
     return im
 
 class AlignedDataset(BaseDataset):
-    def __init__(self):
+    def __init__(self): # 在创建的初始化阶段完成style_dict数据的填充（存储各个图像的风格）
         super(AlignedDataset).__init__()
         self.style_dict = {}
         json_train = json.load(open('/home/ludan/code/github/FSGAN/FSGAN/dataset/FS2K_preproc/train/anno_train.json'))
@@ -79,9 +79,9 @@ class AlignedDataset(BaseDataset):
     def initialize(self, opt):
         self.opt = opt
         self.root = opt.dataroot
-        self.dir_AB = os.path.join(opt.dataroot)
-        self.A_paths = sorted(make_dataset(self.dir_AB, opt.data_json))
-        assert(opt.resize_or_crop == 'resize_and_crop')
+        self.dir_AB = os.path.join(opt.dataroot) # 数据库的位置
+        self.A_paths = sorted(make_dataset(self.dir_AB, opt.data_json)) # 训练集照片的绝对路径
+        assert(opt.resize_or_crop == 'resize_and_crop') # 如果opt.resize_or_crop不是'resize_and_crop'的话就assert
 
     def __getitem__(self, index):
         A_path = self.A_paths[index]

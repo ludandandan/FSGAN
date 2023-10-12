@@ -22,15 +22,14 @@ def is_image_file(filename):
     return any(filename.endswith(extension) for extension in IMG_EXTENSIONS)
 
 
-def make_dataset(dir, train):
-    images = []
+def make_dataset(dir, train):# dir是数据库文件的位置,# train是anno_train.json的位置
+    images = [] # 这里存放各个照片的绝对路径
     assert os.path.isdir(dir), '%s is not a valid directory' % dir
-    data = json.load(open(train))
-    #files = os.listdir(dir)
-    for d in data:
+    data = json.load(open(train)) # 载入anno_train.json文件中的数据
+    for d in data:#files = os.listdir(dir)
         image_name = d['image_name']
         image_name = image_name.replace('/image', '_image').replace('/photo', '_photo')
-        if 'image1136' in image_name:
+        if 'image1136' in image_name:# 为什么要把image1136跳过呢
             continue
         else:
             if is_image_file(image_name):

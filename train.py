@@ -6,13 +6,13 @@ from util.visualizer import Visualizer
 
 if __name__ == '__main__':
     start = time.time()
-    opt = TrainOptions().parse()
-    data_loader = CreateDataLoader(opt)
-    dataset = data_loader.load_data()
+    opt = TrainOptions().parse() #完成了模型参数，数据集参数等参数的处理，参数的打印保存，gpu启用
+    data_loader = CreateDataLoader(opt) #data.CustomDatasetDataLoader(torch.utils.data.DataLoader)，里面有dataloader,dataset(AlignedDataset),opt
+    dataset = data_loader.load_data()#载入数据，dataset是data.CustomDatasetDataLoader类型，里面有dataset(包括数据集的绝对路径，数据集内所有照片的绝对路径，风格字典)和dataloader(多线程载入的torch.utils.data.DataLoader，里面载入的就是前面的dataset)
     dataset_size = len(data_loader)
-    print('#training images = %d' % dataset_size)
+    print('#training images = %d' % dataset_size) # 1057
 
-    model = create_model(opt)
+    model = create_model(opt) # 创建模型
     model.setup(opt)
     visualizer = Visualizer(opt)
     total_steps = 0

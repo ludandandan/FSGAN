@@ -20,10 +20,10 @@ class BaseModel():
         self.gpu_ids = opt.gpu_ids
         self.isTrain = opt.isTrain
         self.device = torch.device('cuda:{}'.format(self.gpu_ids[0])) if self.gpu_ids else torch.device('cpu')
-        self.save_dir = os.path.join(opt.checkpoints_dir, opt.name)
-        self.auxiliary_dir = os.path.join(opt.checkpoints_dir, opt.auxiliary_root)
+        self.save_dir = os.path.join(opt.checkpoints_dir, opt.name)#checkpoints/ckpt_0
+        self.auxiliary_dir = os.path.join(opt.checkpoints_dir, opt.auxiliary_root)#checkpoints/auxiliary
         if opt.resize_or_crop != 'scale_width':
-            torch.backends.cudnn.benchmark = True
+            torch.backends.cudnn.benchmark = True #启用 CuDNN 的自动调整功能，该功能会在运行时根据硬件和输入数据的大小来选择最佳的卷积算法，从而优化网络的性能
         self.loss_names = []
         self.model_names = []
         self.visual_names = []
@@ -71,8 +71,8 @@ class BaseModel():
         lr = self.optimizers[0].param_groups[0]['lr']
         print('learning rate = %.7f' % lr)
 
-    # return visualization images. train.py will display these images, and save the images to a html
-    def get_current_visuals(self):
+    # return visualization images. train.py will display these images, and save the images to a html 
+    def get_current_visuals(self): #返回可视化的图像
         visual_ret = OrderedDict()
         for name in self.visual_names:
             if isinstance(name, str):
