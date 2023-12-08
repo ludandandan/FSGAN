@@ -314,7 +314,7 @@ class BaseModel():
         for i in range(bs):
             center = self.center[i]#x,y
             eyel_p[i] = torch.nn.ConstantPad2d((int(center[0,0] - EYE_W / 2), int(IMAGE_SIZE - (center[0,0]+EYE_W/2)), int(center[0,1] - EYE_H / 2), int(IMAGE_SIZE - (center[0,1]+EYE_H/2))),padvalue)(eyel[i])
-            eyer_p[i] = torch.nn.ConstantPad2d((int(center[1,0] - EYE_W / 2), int(IMAGE_SIZE - (center[1,0]+EYE_W/2)), int(center[1,1] - EYE_H / 2), int(IMAGE_SIZE - (center[1,1]+EYE_H/2))), padvalue)(eyer[i])
+            eyer_p[i] = torch.nn.ConstantPad2d((max(0,int(center[1,0] - EYE_W / 2)), max(0,int(IMAGE_SIZE - (center[1,0]+EYE_W/2))), max(0,int(center[1,1] - EYE_H / 2)), max(int(IMAGE_SIZE - (center[1,1]+EYE_H/2)),0)), padvalue)(eyer[i])
             nose_p[i] = torch.nn.ConstantPad2d((int(center[2,0] - NOSE_W / 2), int(IMAGE_SIZE - (center[2,0]+NOSE_W/2)), int(center[2,1] - NOSE_H / 2), int(IMAGE_SIZE - (center[2,1]+NOSE_H/2))),padvalue)(nose[i])
             # print(mouth[i].shape, (int(center[3,0] - MOUTH_W / 2), int(IMAGE_SIZE - (center[3,0]+MOUTH_W/2)), int(center[3,1] - MOUTH_H / 2), int(IMAGE_SIZE - (center[3,1]+MOUTH_H/2))))
             mouth_p[i] = torch.nn.ConstantPad2d(
