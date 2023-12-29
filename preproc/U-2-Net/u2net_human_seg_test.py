@@ -55,7 +55,7 @@ def main():
     # --------- 1. get image path and name ---------
     model_name='u2net'
 
-    root_dir = '../../dataset/celeba_hq_256/photo'
+    root_dir = '../../dataset/celeba/photo'
     image_dir = os.path.join(os.getcwd(), root_dir)
     prediction_dir = image_dir.replace('photo', 'mask')
     model_dir = os.path.join(os.getcwd(), 'saved_models', model_name+'_human_seg', model_name + '_human_seg.pth')

@@ -9,8 +9,8 @@ from src import detect_faces, show_bboxes
 from PIL import Image
 
 
-root_path = '../../dataset/celeba_hq_256/photo'
-#root_path = '/home/ludan/code/github/FSGAN/FSGAN/dataset/test_data/photo'
+root_path = '../../dataset/celeba/photo'
+#root_path = '/home/ludan/code/github/FSGAN/FSGAN/dataset/celeba/test'
 image_paths = sorted([os.path.join(root_path, p) for p in os.listdir(root_path)])
 
 
