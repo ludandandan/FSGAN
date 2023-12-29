@@ -12,8 +12,8 @@ if __name__ == '__main__':
     dataset_size = len(data_loader)
     print('#training images = %d' % dataset_size) # 1057
 
-    model = create_model(opt) # 创建模型
-    model.setup(opt)
+    model = create_model(opt) # 创建模型，初始化
+    model.setup(opt) # 设置学习率调度器，其实学习率不变
     visualizer = Visualizer(opt)
     total_steps = 0
 
@@ -21,13 +21,13 @@ if __name__ == '__main__':
         epoch_start_time = time.time()
         iter_data_time = time.time()
         epoch_iter = 0
-        for i, data in enumerate(dataset):
+        for i, data in enumerate(dataset): # data是一个有23项的dict，包括A,B,A_paths,B_paths,style,style_path,style_name,style_label,style_label_tensor,style_image,style_image_tensor,style_image_path,style_image_name,style_image_label,style_image_label_tensor,style_image_label_tensor_1,style_image_label_tensor_2,style_image_label_tensor_3,style_image_label_tensor_4,style_image_label_tensor_5,style_image_label_tensor_6,style_image_label_tensor_7,style_image_label_tensor_8
             iter_start_time = time.time()
             if total_steps % opt.print_freq == 0:
                 t_data = iter_start_time - iter_data_time
             visualizer.reset()
-            total_steps += opt.batch_size
-            epoch_iter += opt.batch_size
+            total_steps += opt.batch_size #本代码设置batch_size=1，所以total_steps每次加1
+            epoch_iter += opt.batch_size # epoch_iter同样每次加1，但是每个epoch会清零
             model.set_input(data)
             model.optimize_parameters()
 

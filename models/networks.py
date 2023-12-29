@@ -26,7 +26,7 @@ def get_norm_layer(norm_type='instance'):
 
 def get_scheduler(optimizer, opt):
     if opt.lr_policy == 'lambda':
-        def lambda_rule(epoch):
+        def lambda_rule(epoch): #lr_l = 1.0-max(0,epoch+1-150)/1,
             lr_l = 1.0 - max(0, epoch + 1 + opt.epoch_count - opt.niter) / float(opt.niter_decay + 1)
             return lr_l
         scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_rule)
@@ -98,9 +98,9 @@ def define_G(input_nc, output_nc, ngf, netG, norm='batch', use_dropout=False, in
         net = PartUnet2(input_nc, output_nc, nnG, ngf, norm_layer=norm_layer, use_dropout=use_dropout)
     elif netG == 'combiner':
         net = Combiner(input_nc, output_nc, ngf, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=2)
-    elif netG == 'local':
+    elif netG == 'local':#input_nc=3,output_nc=3,ngf=64,n_downsample_global=3,n_blocks_global=9,n_local_enhancers=1,n_blocks_local=3,norm_layer=nn.BatchNorm2d
         net = LocalEnhancer(input_nc, output_nc, ngf, n_downsample_global=n_downsample_global, n_blocks_global=n_blocks_global, n_local_enhancers=n_local_enhancers, n_blocks_local=n_blocks_local, norm_layer=norm_layer)
-    elif netG == 'global':
+    elif netG == 'global': #input_nc=3,output_nc=3,ngf=64,n_downsample_global=3,n_blocks_global=9,norm_layer=nn.BatchNorm2d
         net = GlobalGenerator(input_nc, output_nc, ngf, n_downsample_global, n_blocks_global, norm_layer)
     else:
         raise NotImplementedError('Generator model name [%s] is not recognized' % netG)
@@ -139,31 +139,31 @@ def define_D(input_nc, ndf, netD, num_D,
 class GANLoss(nn.Module):
     def __init__(self, use_lsgan=True, target_real_label=1.0, target_fake_label=0.0):
         super(GANLoss, self).__init__()
-        self.register_buffer('real_label', torch.tensor(target_real_label))
-        self.register_buffer('fake_label', torch.tensor(target_fake_label))
+        self.register_buffer('real_label', torch.tensor(target_real_label))#tensor(1.)
+        self.register_buffer('fake_label', torch.tensor(target_fake_label))#tensor(0.)
         if use_lsgan:
             self.loss = nn.MSELoss()
         else:#no_lsgan
-            self.loss = nn.BCEWithLogitsLoss()
+            self.loss = nn.BCEWithLogitsLoss() # 结合了Sigmoid激活函数和二分类交叉熵损失，适用于输出层没有经过sigmoid激活的
 
     def get_target_tensor(self, input, target_is_real):
         if target_is_real:
             target_tensor = self.real_label
         else:
             target_tensor = self.fake_label
-        return target_tensor.expand_as(input)
+        return target_tensor.expand_as(input) #返回与input相同size的tensor，tensor的值为target_tensor的值（全为0或全为1）
 
-    def __call__(self, input, target_is_real):
-        if isinstance(input[0], list):
+    def __call__(self, input, target_is_real): #input一般是[list1,list2],每个list里面有5个特征图
+        if isinstance(input[0], list): #如果input的第一个元素是list【应该是因为有些在某些条件下输出的是各个层特征图的list，而不只是最后一个结果，想法可能有误】
             loss = 0
-            for input_i in input:
-                pred = input_i[-1]
-                target_tensor = self.get_target_tensor(pred, target_is_real)
-                loss += self.loss(pred, target_tensor)
-            return loss
+            for input_i in input:#对于input中的每一个元素:list1和list2；
+                pred = input_i[-1]#取出list_i的最后一个元素，即最后一个特征图,[1,1,67,67]和[1,1,35,35]
+                target_tensor = self.get_target_tensor(pred, target_is_real) #将target_is_real扩展成与pred大小一样的tensor，因为是false，所以数值都是0，其实就是判断感受野中的每一个patch是否是假的
+                loss += self.loss(pred, target_tensor) #计算特征图与0之间的loss
+            return loss #返回的loss是上面loss的和
         else:            
             target_tensor = self.get_target_tensor(input[-1], target_is_real)
-            return self.loss(input[-1], target_tensor)
+            return self.loss(input[-1], target_tensor) #计算input最后一个元素和target_tensor【他的大小与最后一个元素一样】的loss
 
 class NLayerDiscriminatorCls(nn.Module):
 	"""Defines a PatchGAN discriminator"""
@@ -191,18 +191,18 @@ class NLayerDiscriminatorCls(nn.Module):
 		for n in range(1, n_layers_D):  # gradually increase the number of filters
 			nf_mult_prev = nf_mult
 			nf_mult = min(2 ** n, 8)
-			sequence += [
+			sequence += [#通道64->128，卷积核4x4，步长2，padding=1，-Batch Norm-LeakyReLU
 				nn.Conv2d(ndf * nf_mult_prev, ndf * nf_mult, kernel_size=kw, stride=2, padding=padw, bias=use_bias),
 				norm_layer(ndf * nf_mult),
 				nn.LeakyReLU(0.2, True)
-			]
+			]#通道128->256，卷积核4x4，步长2，padding=1，-Batch Norm-LeakyReLU
 
 		nf_mult_prev = nf_mult #4
 		nf_mult = min(2 ** n_layers_D, 8) #8
 		sequence1 = [
 			nn.Conv2d(ndf * nf_mult_prev, ndf * nf_mult, kernel_size=kw, stride=1, padding=padw, bias=use_bias),
 			norm_layer(ndf * nf_mult),
-			nn.LeakyReLU(0.2, True)
+			nn.LeakyReLU(0.2, True) #通道256->512，卷积核4x4，步长2，padding=1，-Batch Norm-LeakyReLU
 		]
 		sequence1 += [nn.Conv2d(ndf * nf_mult, 1, kernel_size=kw, stride=1, padding=padw)]  # output 1 channel prediction map
 
@@ -242,7 +242,7 @@ class MultiscaleDiscriminator(nn.Module):
         self.n_layers = n_layers #3
         self.getIntermFeat = getIntermFeat#True
      
-        for i in range(num_D):
+        for i in range(num_D): # 使用了2个NNLayerDiscriminator
             netD = NNLayerDiscriminator(input_nc, ndf, n_layers, norm_layer, use_sigmoid, getIntermFeat)
             if getIntermFeat:                                
                 for j in range(n_layers+2):
@@ -252,7 +252,7 @@ class MultiscaleDiscriminator(nn.Module):
 
         self.downsample = nn.AvgPool2d(3, stride=2, padding=[1, 1], count_include_pad=False)
 
-    def singleD_forward(self, model, input):
+    def singleD_forward(self, model, input): #与NNLayerDiscriminator的forward函数类似
         if self.getIntermFeat:
             result = [input]
             for i in range(len(model)):
@@ -262,11 +262,11 @@ class MultiscaleDiscriminator(nn.Module):
             return [model(input)]
 
     def forward(self, input):        
-        num_D = self.num_D
+        num_D = self.num_D #2
         result = []
         input_downsampled = input
         for i in range(num_D):
-            if self.getIntermFeat:
+            if self.getIntermFeat: # True，如果需要中间层的特征图
                 model = [getattr(self, 'scale'+str(num_D-1-i)+'_layer'+str(j)) for j in range(self.n_layers+2)]
             else:
                 model = getattr(self, 'layer'+str(num_D-1-i))
@@ -333,20 +333,20 @@ class LocalEnhancer(nn.Module):
     def __init__(self, input_nc, output_nc, ngf=32, n_downsample_global=4, n_blocks_global=9, 
                  n_local_enhancers=1, n_blocks_local=3, norm_layer=nn.BatchNorm2d, padding_type='reflect', extra_channel=3):        
         super(LocalEnhancer, self).__init__()
-        self.n_local_enhancers = n_local_enhancers
-        model_pred = [nn.Conv2d(input_nc + extra_channel, 3, kernel_size=1, padding=0)]
+        self.n_local_enhancers = n_local_enhancers #1
+        model_pred = [nn.Conv2d(input_nc + extra_channel, 3, kernel_size=1, padding=0)] #6->3
         self.model_pred = nn.Sequential(*model_pred)       
         ###### global generator model #####           
         ngf_global = ngf * (2**n_local_enhancers)#128
         model_global = GlobalGenerator(input_nc, output_nc, ngf_global, 4, n_blocks_global, norm_layer).model        
-        model_global = [model_global[i] for i in range(len(model_global)-3)] # get rid of final convolution layers        
+        model_global = [model_global[i] for i in range(len(model_global)-3)] # get rid of final convolution layers 去掉最后的卷积层（实际是最后的3层，到BatchNorm(128)-LeakyReLU为止       
         self.model = nn.Sequential(*model_global)
-        model_pred = [nn.Conv2d(128 + extra_channel, 128, kernel_size=1, padding=0)]
+        model_pred = [nn.Conv2d(128 + extra_channel, 128, kernel_size=1, padding=0)] # 128+3->128
         self.model_pred = nn.Sequential(*model_pred)
         ###### local enhancer layers #####
         for n in range(1, n_local_enhancers+1):
             ### downsample            
-            ngf_global = ngf * (2**(n_local_enhancers-n))
+            ngf_global = ngf * (2**(n_local_enhancers-n)) #64
             model_downsample = [nn.ReflectionPad2d(3), nn.Conv2d(input_nc, ngf_global, kernel_size=7, padding=0), 
                                 norm_layer(ngf_global), nn.LeakyReLU(),
                                 nn.Conv2d(ngf_global, ngf_global * 2, kernel_size=3, stride=2, padding=1), 
@@ -354,7 +354,7 @@ class LocalEnhancer(nn.Module):
             ### residual blocks
             model_upsample = []
             #model_upsample += [RDB(ngf_global * 2, 3, 16)]
-            for i in range(n_blocks_local):
+            for i in range(n_blocks_local): #3
                 model_upsample += [RDB(ngf_global * 2, 4, ngf_global *2), norm_layer(ngf_global *2), nn.LeakyReLU()]
             #    model_upsample += [RResnetBlock(ngf_global * 2, padding_type=padding_type, norm_layer=norm_layer)]
 
@@ -375,12 +375,12 @@ class LocalEnhancer(nn.Module):
         #input = self.model_pred(torch.cat((input, input2), 1))  
         ### create input pyramid
         input_downsampled = [input]
-        for i in range(self.n_local_enhancers):
+        for i in range(self.n_local_enhancers): #1
             input_downsampled.append(self.downsample(input_downsampled[-1]))
 
         ### output at coarest level
         output_prev = self.model(input_downsampled[-1])
-        output_prev = self.model_pred(torch.cat((output_prev, input2), 1))       
+        output_prev = self.model_pred(torch.cat((output_prev, input2), 1))  # 131->3     
         ### build up one layer at a time
         for n_local_enhancers in range(1, self.n_local_enhancers+1):
             model_downsample = getattr(self, 'model'+str(n_local_enhancers)+'_1')
@@ -772,15 +772,15 @@ class TVLoss(nn.Module):
         super(TVLoss,self).__init__()
         self.TVLoss_weight = TVLoss_weight
  
-    def forward(self,x):
+    def forward(self,x): # 总变差损失
         batch_size = x.size()[0]
         h_x = x.size()[2]
         w_x = x.size()[3]
-        count_h = self._tensor_size(x[:,:,1:,:])    
-        count_w = self._tensor_size(x[:,:,:,1:])
-        h_tv = torch.pow((x[:,:,1:,:]-x[:,:,:h_x-1,:]),2).sum()  
-        w_tv = torch.pow((x[:,:,:,1:]-x[:,:,:,:w_x-1]),2).sum()
-        return self.TVLoss_weight*2*(h_tv/count_h+w_tv/count_w)/batch_size
+        count_h = self._tensor_size(x[:,:,1:,:]) #batch数*通道数* 宽，计算高度方向上的像素数  
+        count_w = self._tensor_size(x[:,:,:,1:]) #batch数*通道数* 高，计算宽度方向上的像素数
+        h_tv = torch.pow((x[:,:,1:,:]-x[:,:,:h_x-1,:]),2).sum()  #计算高度方向上的总变差，即每个像素与其下方像素的差的平方和
+        w_tv = torch.pow((x[:,:,:,1:]-x[:,:,:,:w_x-1]),2).sum() #计算宽度方向上的总变差，即每个像素与其右方像素的差的平方和
+        return self.TVLoss_weight*2*(h_tv/count_h+w_tv/count_w)/batch_size #总变差损失，除以像素数和batch数，乘以权重
  
     def _tensor_size(self,t):
         return t.size()[1]*t.size()[2]*t.size()[3]
@@ -815,18 +815,18 @@ class Vgg19(torch.nn.Module):
         h_relu3 = self.slice3(h_relu2)        
         h_relu4 = self.slice4(h_relu3)        
         h_relu5 = self.slice5(h_relu4)                
-        out = [h_relu1, h_relu2, h_relu3, h_relu4, h_relu5]
+        out = [h_relu1, h_relu2, h_relu3, h_relu4, h_relu5] # 输出是5个特征图
         return out
 
 class VGGLoss(nn.Module):
     def __init__(self, gpu_ids):
         super(VGGLoss, self).__init__()        
-        self.vgg = Vgg19().cuda()
+        self.vgg = Vgg19().cuda() #这个vgg是含预训练参数的，但是被分块了，有5块，共30层
         self.criterion = nn.L1Loss()
-        self.weights = [1.0/32, 1.0/16, 1.0/8, 1.0/4, 1.0]        
+        self.weights = [1.0/32, 1.0/16, 1.0/8, 1.0/4, 1.0]    #定义各块的权重    
 
     def forward(self, x, y):        
-        x_vgg, y_vgg = self.vgg(x), self.vgg(y)
+        x_vgg, y_vgg = self.vgg(x), self.vgg(y) # 两个输入都进入vgg获取5块特征
         loss = 0
         for i in range(len(x_vgg)):
             loss += self.weights[i] * self.criterion(x_vgg[i], y_vgg[i].detach())        
@@ -849,8 +849,8 @@ class MakeDense(nn.Module):
 class RDB(nn.Module):
     def __init__(self, in_channels, num_dense_layer, growth_rate):
         """
-        :param in_channels: input channel size
-        :param num_dense_layer: the number of RDB layers
+        :param in_channels: input channel size 输入通道数
+        :param num_dense_layer: the number of RDB layers 
         :param growth_rate: growth_rate
         """
         super(RDB, self).__init__()

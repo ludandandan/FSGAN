@@ -28,14 +28,14 @@ def tocv2(ts):
     return img
 
 def dt(img):
-    if(img.shape[2]==3):
+    if(img.shape[2]==3): # 如果是3通道的图像，转换成灰度图
         img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
     #convert to BW
-    ret1,thresh1 = cv2.threshold(img,127,255,cv2.THRESH_BINARY)
-    ret2,thresh2 = cv2.threshold(img,127,255,cv2.THRESH_BINARY_INV)
-    dt1 = cv2.distanceTransform(thresh1,cv2.DIST_L2,5)
+    ret1,thresh1 = cv2.threshold(img,127,255,cv2.THRESH_BINARY) #将大于127的设置为255，小于127的设置为0，thersh1为阈值化后的图像[512,512]
+    ret2,thresh2 = cv2.threshold(img,127,255,cv2.THRESH_BINARY_INV) #将大于127的设置为0，小于127的设置为255
+    dt1 = cv2.distanceTransform(thresh1,cv2.DIST_L2,5)#对输入的二值化图像进行距离变换，生成一个图像 dt1，其中每个像素值表示该位置像素到最近边界像素的欧氏距离，5指距离变换的掩码大小
     dt2 = cv2.distanceTransform(thresh2,cv2.DIST_L2,5)
-    dt1 = dt1/dt1.max()#->[0,1]
+    dt1 = dt1/dt1.max()#->[0,1] ，归一化到[0,1]
     dt2 = dt2/dt2.max()
     return dt1, dt2
 
@@ -86,24 +86,24 @@ class AlignedDataset(BaseDataset):
     def __getitem__(self, index):
         A_path = self.A_paths[index]
         B_path = A_path.replace('photo', 'sketch').replace('image', 'sketch')
-        A = Image.open(A_path).convert('RGB')
-        B = Image.open(B_path).convert('RGB')
+        A = Image.open(A_path).convert('RGB')# 照片
+        B = Image.open(B_path).convert('RGB') #素描
         basenB = B_path.split('/')[-2] + '/' + B_path.split('/')[-1]
         # softmax = np.load(os.path.join(self.softmaxloc,basenB[:-4]+'.npy'))
         # softmax = torch.Tensor(softmax)
         # [maxv,index] = torch.max(softmax,0)
         index = self.style_dict[os.path.splitext(basenB.split('/')[-1])[0]]
-        B_label = index
+        B_label = index # 当前素描的风格类型
         B_style = torch.Tensor([0.,0.,0.])
-        B_style[index] = 1.
+        B_style[index] = 1. # 当前素描的风格类型的one-hot编码
         B_style = B_style.view(3, 1, 1)
-        B_style = B_style.repeat(1, 256, 256)        
+        B_style = B_style.repeat(1, 256, 256) # shape: [3, 256, 256]    
 
         # w, h = AB.size
         # w2 = int(w / 2)
         # A = AB.crop((0, 0, w2, h)).resize((self.opt.loadSize, self.opt.loadSize), Image.BICUBIC)
         # B = AB.crop((w2, 0, w, h)).resize((self.opt.loadSize, self.opt.loadSize), Image.BICUBIC)
-        A = A.resize((self.opt.loadSize, self.opt.loadSize), Image.BICUBIC)
+        A = A.resize((self.opt.loadSize, self.opt.loadSize), Image.BICUBIC) # resize成512*512
         B = B.resize((self.opt.loadSize, self.opt.loadSize), Image.BICUBIC)
         A = transforms.ToTensor()(A)
         B = transforms.ToTensor()(B)
@@ -124,12 +124,12 @@ class AlignedDataset(BaseDataset):
             output_nc = self.opt.output_nc
 
         flipped = False
-        if (not self.opt.no_flip) and random.random() < 0.5:
+        if (not self.opt.no_flip) and random.random() < 0.5: # 数据增强
             flipped = True
-            idx = [i for i in range(A.size(2) - 1, -1, -1)]
+            idx = [i for i in range(A.size(2) - 1, -1, -1)]# 生成一个索引列表，从最后一个元素到第一个元素
             idx = torch.LongTensor(idx)
-            A = A.index_select(2, idx)
-            B = B.index_select(2, idx)
+            A = A.index_select(2, idx)#index_select 函数根据生成的索引列表对图像进行水平翻转。2表示沿着宽度维度进行翻转
+            B = B.index_select(2, idx)#index_select 用于按给定维度对张量进行索引选择。第一个参数是维度，第二个参数是索引列表
 
         if input_nc == 1:  # RGB to gray
             tmp = A[0, ...] * 0.299 + A[1, ...] * 0.587 + A[2, ...] * 0.114
@@ -146,21 +146,21 @@ class AlignedDataset(BaseDataset):
             regions = ['eyel','eyer','nose','mouth']
             basen = A_path.split('.')[0].replace('/photo/', '/landmark/')+'.txt'
             #featdir = self.opt.lm_dir
-            featpath = basen
-            feats = getfeats(featpath)
+            featpath = basen #当前照片的landmark文件的绝对路径
+            feats = getfeats(featpath)#获取当前照片的landmark，shape: [5, 2]
             # w, h = Image.open(A_path).size
             # feats[:, 0] = (feats[:, 0] * (self.opt.loadSize / w)).astype(np.uint8)
             # feats[:, 1] = (feats[:, 1] * (self.opt.loadSize / h)).astype(np.uint8)
             # print('feats:', feats, self.opt.loadSize / w, self.opt.loadSize / h)
-            if flipped:
+            if flipped: # 已经翻转过
                 for i in range(5):
                     feats[i,0] = self.opt.fineSize - feats[i,0] - 1
-                tmp = [feats[0,0],feats[0,1]]
+                tmp = [feats[0,0],feats[0,1]] # 左右眼交换
                 feats[0,:] = [feats[1,0],feats[1,1]]
                 feats[1,:] = tmp
-            mouth_x = int((feats[3,0]+feats[4,0])/2.0)
-            mouth_y = int((feats[3,1]+feats[4,1])/2.0)
-            ratio = self.opt.fineSize / 256
+            mouth_x = int((feats[3,0]+feats[4,0])/2.0) # 嘴巴中心点x坐标
+            mouth_y = int((feats[3,1]+feats[4,1])/2.0) # 嘴巴中心点y坐标
+            ratio = self.opt.fineSize / 256 # 512/256
             EYE_H = self.opt.EYE_H * ratio
             EYE_W = self.opt.EYE_W * ratio
             NOSE_H = self.opt.NOSE_H * ratio
@@ -168,10 +168,10 @@ class AlignedDataset(BaseDataset):
             MOUTH_H = self.opt.MOUTH_H * ratio
             MOUTH_W = self.opt.MOUTH_W * ratio
             center = torch.IntTensor([[feats[0,0],feats[0,1]-4*ratio],[feats[1,0],feats[1,1]-4*ratio],[feats[2,0],feats[2,1]-NOSE_H/2+16*ratio],[mouth_x,mouth_y]])
-            item['center'] = center
+            item['center'] = center # center shape: [4, 2]
             rhs = [EYE_H,EYE_H,NOSE_H,MOUTH_H]
             rws = [EYE_W,EYE_W,NOSE_W,MOUTH_W]
-            if self.opt.soft_border:
+            if self.opt.soft_border: # 是否使用软边界，如果使用软边界，就生成软边界的mask，放在item中
                 soft_border_mask4 = []
                 for i in range(4):
                     xb = [np.zeros(rhs[i]),np.ones(rhs[i])*(rws[i]-1)]
@@ -186,10 +186,10 @@ class AlignedDataset(BaseDataset):
                     item[regions[i]+'_A'] = item[regions[i]+'_A'] * soft_border_mask4[i].repeat(input_nc/output_nc,1,1)
                     item[regions[i]+'_B'] = item[regions[i]+'_B'] * soft_border_mask4[i]
             
-            mask = torch.ones(B.shape) # mask out eyes, nose, mouth
-            for i in range(4):
+            mask = torch.ones(B.shape) # mask out eyes, nose, mouth 构建全为1的mask
+            for i in range(4): # 将眼睛鼻子嘴巴区域置为0
                 mask[:,int(center[i,1]-rhs[i]/2):int(center[i,1]+rhs[i]/2),int(center[i,0]-rws[i]/2):int(center[i,0]+rws[i]/2)] = 0
-            if self.opt.soft_border:
+            if self.opt.soft_border:# 如果使用软边界，就生成软边界的mask，放在item中
                 imgsize = self.opt.fineSize
                 maskn = mask[0].numpy()
                 masks = [np.ones([imgsize,imgsize]),np.ones([imgsize,imgsize]),np.ones([imgsize,imgsize]),np.ones([imgsize,imgsize])]
@@ -236,13 +236,13 @@ class AlignedDataset(BaseDataset):
         
         if self.opt.isTrain:
             if self.opt.which_direction == 'AtoB':
-                img = tocv2(B)
+                img = tocv2(B) # image[512,512,3]
             else:
                 img = tocv2(A)
-            dt1, dt2 = dt(img)
+            dt1, dt2 = dt(img) # dt1, dt2 shape: [512, 512]，每个像素点的值表示该位置像素到最近边界像素的欧氏距离
             dt1 = torch.from_numpy(dt1)
             dt2 = torch.from_numpy(dt2)
-            dt1 = dt1.unsqueeze(0)
+            dt1 = dt1.unsqueeze(0) #[1, 512, 512]，数值在0-1之间
             dt2 = dt2.unsqueeze(0)
             item['dt1gt'] = dt1
             item['dt2gt'] = dt2

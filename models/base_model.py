@@ -237,13 +237,13 @@ class BaseModel():
         return torch.ones(mask.shape).to(self.device)-mask
     
     def masked(self, A,mask):
-        return (A/2+0.5)*mask*2-1
+        return (A/2+0.5)*mask*2-1 # 将A从-1到1调整到0到1，然后乘以mask，在调整到-1到1
     
     def add_with_mask(self, A,B,mask):
         return ((A/2+0.5)*mask+(B/2+0.5)*(torch.ones(mask.shape).to(self.device)-mask))*2-1
     
     def addone_with_mask(self, A,mask):
-        return ((A/2+0.5)*mask+(torch.ones(mask.shape).to(self.device)-mask))*2-1
+        return ((A/2+0.5)*mask+(torch.ones(mask.shape).to(self.device)-mask))*2-1 #先将A调整到0到1，乘以mask，然后再加上mask的反转，将结果调整到-1到1【就是mask原来为1的区域是A本身的图，mask原来为0的区域变成1】
     
     def partCombiner2(self, eyel, eyer, nose, mouth, hair, mask, comb_op = 1):
         if comb_op == 0:
@@ -293,11 +293,11 @@ class BaseModel():
             padvalue = -1
             hair = self.masked(hair, maskh)
             bg = self.masked(bg, maskb)
-        else:
+        else: # comp_op =1 走这里
             # use min pooling, pad white for eyes etc
             padvalue = 1
-            hair = self.addone_with_mask(hair, maskh)
-            bg = self.addone_with_mask(bg, maskb)
+            hair = self.addone_with_mask(hair, maskh) # 让除了头发的部分都变成1（头发区域还是原来的合成的头发素描）
+            bg = self.addone_with_mask(bg, maskb) # 让除了背景的部分都变成1（背景区域还是原来合成的背景素描）
         IMAGE_SIZE = self.opt.fineSize
         ratio = IMAGE_SIZE / 256
         EYE_W = self.opt.EYE_W * ratio
@@ -306,14 +306,15 @@ class BaseModel():
         NOSE_H = self.opt.NOSE_H * ratio
         MOUTH_W = self.opt.MOUTH_W * ratio
         MOUTH_H = self.opt.MOUTH_H * ratio
-        bs,nc,_,_ = eyel.shape
-        eyel_p = torch.ones((bs,nc,IMAGE_SIZE,IMAGE_SIZE)).to(self.device)
-        eyer_p = torch.ones((bs,nc,IMAGE_SIZE,IMAGE_SIZE)).to(self.device)
-        nose_p = torch.ones((bs,nc,IMAGE_SIZE,IMAGE_SIZE)).to(self.device)
-        mouth_p = torch.ones((bs,nc,IMAGE_SIZE,IMAGE_SIZE)).to(self.device)
-        for i in range(bs):
-            center = self.center[i]#x,y
-            eyel_p[i] = torch.nn.ConstantPad2d((int(center[0,0] - EYE_W / 2), int(IMAGE_SIZE - (center[0,0]+EYE_W/2)), int(center[0,1] - EYE_H / 2), int(IMAGE_SIZE - (center[0,1]+EYE_H/2))),padvalue)(eyel[i])
+        bs,nc,_,_ = eyel.shape # 获取batchsize和通道数
+        eyel_p = torch.ones((bs,nc,IMAGE_SIZE,IMAGE_SIZE)).to(self.device) # 生成一个全1的tensor[1,3,512,512]
+        eyer_p = torch.ones((bs,nc,IMAGE_SIZE,IMAGE_SIZE)).to(self.device)# 生成一个全1的tensor[1,3,512,512]
+        nose_p = torch.ones((bs,nc,IMAGE_SIZE,IMAGE_SIZE)).to(self.device)# 生成一个全1的tensor[1,3,512,512]
+        mouth_p = torch.ones((bs,nc,IMAGE_SIZE,IMAGE_SIZE)).to(self.device)# 生成一个全1的tensor[1,3,512,512]
+        for i in range(bs): # 对batch里面的每一张图片进行处理
+            center = self.center[i]#眼睛鼻子嘴巴4个中心点的位置坐标x,y
+            #将眼睛鼻子嘴巴区域的素描在上下左右pad上数值1，使其变成[1,3,512,512]的大小，存放在eyel_p等中
+            eyel_p[i] = torch.nn.ConstantPad2d((int(center[0,0] - EYE_W / 2), int(IMAGE_SIZE - (center[0,0]+EYE_W/2)), int(center[0,1] - EYE_H / 2), int(IMAGE_SIZE - (center[0,1]+EYE_H/2))),padvalue)(eyel[i]) # 对眼睛区域进行padding，上下左右都pad上数值1，pad的范围是根据中心点坐标和眼睛的宽高计算出来的
             eyer_p[i] = torch.nn.ConstantPad2d((max(0,int(center[1,0] - EYE_W / 2)), max(0,int(IMAGE_SIZE - (center[1,0]+EYE_W/2))), max(0,int(center[1,1] - EYE_H / 2)), max(int(IMAGE_SIZE - (center[1,1]+EYE_H/2)),0)), padvalue)(eyer[i])
             nose_p[i] = torch.nn.ConstantPad2d((int(center[2,0] - NOSE_W / 2), int(IMAGE_SIZE - (center[2,0]+NOSE_W/2)), int(center[2,1] - NOSE_H / 2), int(IMAGE_SIZE - (center[2,1]+NOSE_H/2))),padvalue)(nose[i])
             # print(mouth[i].shape, (int(center[3,0] - MOUTH_W / 2), int(IMAGE_SIZE - (center[3,0]+MOUTH_W/2)), int(center[3,1] - MOUTH_H / 2), int(IMAGE_SIZE - (center[3,1]+MOUTH_H/2))))
@@ -327,7 +328,7 @@ class BaseModel():
             eye_nose_mouth = torch.max(eye_nose, mouth_p)
             eye_nose_mouth_hair = torch.max(hair,eye_nose_mouth)
             result = torch.max(bg,eye_nose_mouth_hair)
-        else:
+        else: # 走这里，通过不断的取最小值来实现融合，因为这些tensor的数值范围都是-1到1，刚pad上的数值是1，但凡是有预测出不是1的就肯定比1小，就可以替换掉原来的1
             eyes = torch.min(eyel_p, eyer_p)
             eye_nose = torch.min(eyes, nose_p)
             eye_nose_mouth = torch.min(eye_nose, mouth_p)
@@ -353,16 +354,16 @@ class BaseModel():
         return result
     
     def getLocalParts(self,fakeAB):
-        bs,nc,_,_ = fakeAB.shape #dtype torch.float32
+        bs,nc,_,_ = fakeAB.shape #dtype torch.float32，获取batchsize和通道数
         ncr = nc // self.opt.output_nc
-        ratio = self.opt.fineSize // 256
+        ratio = self.opt.fineSize // 256 # 512/256=2
         EYE_H = self.opt.EYE_H * ratio
         EYE_W = self.opt.EYE_W * ratio
         NOSE_H = self.opt.NOSE_H * ratio
         NOSE_W = self.opt.NOSE_W * ratio
         MOUTH_H = self.opt.MOUTH_H * ratio
         MOUTH_W = self.opt.MOUTH_W * ratio
-        eyel = torch.ones((bs,nc,EYE_H,EYE_W)).to(self.device)
+        eyel = torch.ones((bs,nc,EYE_H,EYE_W)).to(self.device) # 生成一个全1的tensor[1,3,80，112]
         eyer = torch.ones((bs,nc,EYE_H,EYE_W)).to(self.device)
         nose = torch.ones((bs,nc,NOSE_H,NOSE_W)).to(self.device)
         mouth = torch.ones((bs,nc,MOUTH_H,MOUTH_W)).to(self.device)
@@ -379,13 +380,13 @@ class BaseModel():
     def getaddw(self,local_name):
         addw = 1
         if local_name in ['DLEyel','DLEyer','eyel','eyer']:
-            addw = self.opt.addw_eye
+            addw = self.opt.addw_eye #1.0
         elif local_name in ['DLNose', 'nose']:
-            addw = self.opt.addw_nose
+            addw = self.opt.addw_nose#1.0
         elif local_name in ['DLMouth', 'mouth']:
-            addw = self.opt.addw_mouth
+            addw = self.opt.addw_mouth#1.0
         elif local_name in ['DLHair', 'hair']:
-            addw = self.opt.addw_hair
+            addw = self.opt.addw_hair#1.8
         elif local_name in ['DLBG', 'bg']:
-            addw = self.opt.addw_bg
+            addw = self.opt.addw_bg#1.0
         return addw
